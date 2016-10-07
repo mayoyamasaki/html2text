@@ -38,15 +38,36 @@ def html2body(html):
 
 def html2text(html):
     """ extract full text from HTML tagged text """
+
     from html.parser import HTMLParser
     class MLStripper(HTMLParser):
+        BLOCKS = ['p', 'div', 'table', 'dl', 'ul',
+                  'ol', 'form', 'address', 'blockquote', 'h1',
+                  'h2', 'h3', 'h4', 'h5', 'h6', 'fieldset',
+                  'hr', 'pre''article', 'aside', 'dialog',
+                  'figure', 'footer', 'header', 'legend', 'nav',
+                  'section']
+        IGNORES = ['style', 'script']
+
         def __init__(self):
             self.reset()
-            self.strict = False
             self.convert_charrefs= True
             self.fed = []
-        def handle_data(self, d):
-            self.fed.append(d)
+            self.current_tag = 'INIT_VALUE'
+
+        def handle_startendtag(self, tag, _):
+            self.current_tag = tag
+
+        def handle_data(self, data):
+            if self.current_tag not in self.IGNORES:
+                self.fed.append(data)
+
+        def handle_endtag(self, tag):
+            # to bypass extract from '<p>foo</p>bar' to 'foobar'
+            # this case potentially failed to be tokenized
+            if tag in self.BLOCKS:
+                self.fed.append('\n')
+
         def get_data(self):
             return ''.join(self.fed)
 
