@@ -1,5 +1,5 @@
 # html2text
-html2text is a shiple implementation text extractor that convert html to tokenizable text which can be easily tokenized.
+html2text converts html to text which can be easily tokenized.
 
 ## Requirements
 - you should install [readability](https://github.com/buriy/python-readability) module.
