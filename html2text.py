@@ -97,7 +97,7 @@ def main():
     parser.add_argument('input',
                         help="input file or url.")
 
-    parser.add_argument('-b', '--body-extract',
+    parser.add_argument('-b', '--body-not-extract',
                         action='store_false',
                         help="**not** extract main body text from html using buriy's readability")
 
@@ -108,7 +108,7 @@ def main():
     else:
         html = sys.stdin
 
-    if args.body_extract:
+    if args.body_not_extract:
         html  = html2body(html)
 
     text = html2text(html)
