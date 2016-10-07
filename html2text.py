@@ -6,11 +6,11 @@
 #
 # ==============================================================================
 import argparse
+from html.parser import HTMLParser
 import re
 from readability.readability import Document
 import sys
 import urllib.request
-
 
 def url2html(url):
     """get html from internet url"""
@@ -36,59 +36,58 @@ def html2body(html):
     return title + '\n' + body
 
 
-def html2text(html):
-    """ extract full text from HTML tagged text """
+class Parser(HTMLParser):
+    BLOCKS = ['p', 'div', 'table', 'dl', 'ul',
+              'ol', 'form', 'address', 'blockquote', 'h1',
+              'h2', 'h3', 'h4', 'h5', 'h6', 'fieldset',
+              'hr', 'pre''article', 'aside', 'dialog',
+              'figure', 'footer', 'header', 'legend', 'nav',
+              'section']
+    IGNORES = ['style', 'script']
 
-    from html.parser import HTMLParser
-    class MLStripper(HTMLParser):
-        BLOCKS = ['p', 'div', 'table', 'dl', 'ul',
-                  'ol', 'form', 'address', 'blockquote', 'h1',
-                  'h2', 'h3', 'h4', 'h5', 'h6', 'fieldset',
-                  'hr', 'pre''article', 'aside', 'dialog',
-                  'figure', 'footer', 'header', 'legend', 'nav',
-                  'section']
-        IGNORES = ['style', 'script']
+    def __init__(self):
+        self.reset()
+        self.convert_charrefs= True
+        self.fed = []
+        self.current_tag = 'INIT_VALUE'
 
-        def __init__(self):
-            self.reset()
-            self.convert_charrefs= True
-            self.fed = []
-            self.current_tag = 'INIT_VALUE'
+    def handle_startendtag(self, tag, _):
+        self.current_tag = tag
 
-        def handle_startendtag(self, tag, _):
-            self.current_tag = tag
+    def handle_data(self, data):
+        if self.current_tag in self.IGNORES: return
+        self.fed.append(data)
 
-        def handle_data(self, data):
-            if self.current_tag not in self.IGNORES:
-                self.fed.append(data)
+    def handle_endtag(self, tag):
+        # to bypass extract from '<p>foo</p>bar' to 'foobar'
+        # this case potentially failed to be tokenized
+        if tag in self.BLOCKS:
+            self.fed.append('\n')
 
-        def handle_endtag(self, tag):
-            # to bypass extract from '<p>foo</p>bar' to 'foobar'
-            # this case potentially failed to be tokenized
-            if tag in self.BLOCKS:
-                self.fed.append('\n')
+    def get_data(self):
+        text = ''.join(self.fed)
 
-        def get_data(self):
-            return ''.join(self.fed)
-
-    def sanitize(text):
-        """ Sanitize test """
-        # delete tab and unicorde space.
+        # normailze space letter
         text = text.replace('\t', ' ').replace('\xa0', ' ')
-        # eliminate concat error such as "foo</X><Y>bar -> foobar"
-        text = re.sub(r"><", "> <", text)
+
+        # compress space letters
+        text = re.sub(r' +', ' ', text)
+
+        # delete space and filter blank sentences.
+        text = '\n'.join(
+            filter(lambda x: x != '',
+                map(lambda s: s.strip(), text.split('\n'))
+            )
+        )
+
         return text
 
-    s = MLStripper()
-    s.feed(sanitize(html))
-    text = re.sub(r" +", " ", s.get_data())
-    # delete space and filter blank sentences.
-    text = '\n'.join(
-        filter(lambda x: x != '',
-            map(lambda s: s.strip(), text.split('\n'))
-        )
-    )
-    return text
+
+def html2text(html):
+    """ extract full text from HTML tagged text """
+    p = Parser()
+    p.feed(html)
+    return p.get_data()
 
 
 def main():
