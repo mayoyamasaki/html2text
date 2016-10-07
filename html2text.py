@@ -43,7 +43,7 @@ class Parser(HTMLParser):
               'hr', 'pre''article', 'aside', 'dialog',
               'figure', 'footer', 'header', 'legend', 'nav',
               'section']
-    IGNORES = ['style', 'script']
+    IGNORES = ['style', 'script', 's']
 
     def __init__(self):
         self.reset()
@@ -52,7 +52,7 @@ class Parser(HTMLParser):
         self.current_tag = 'INIT_VALUE'
 
     def handle_startendtag(self, tag, _):
-        self.current_tag = tag
+        self.current_tag = tag.lower()
 
     def handle_data(self, data):
         if self.current_tag in self.IGNORES: return
