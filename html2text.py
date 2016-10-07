@@ -36,26 +36,6 @@ def html2body(html):
     return title + '\n' + body
 
 
-def format_body(url):
-    body = re.sub(r" +", " ", html2text(sanitize(body_html)))
-    # delete space and filter blank sentences.
-    body = '\n'.join(
-        filter(lambda x: x != '',
-            map(lambda s: s.strip(), body.split('\n'))
-        )
-    )
-    return (title, body)
-
-
-def sanitize(text):
-    """ Sanitize test """
-    # delete tab and unicorde space.
-    text = text.replace('\t', ' ').replace('\xa0', ' ')
-    # eliminate concat error such as "foo</X><Y>bar -> foobar"
-    text = re.sub(r"><", "> <", text)
-    return text
-
-
 def html2text(html):
     """ extract full text from HTML tagged text """
     from html.parser import HTMLParser
@@ -70,9 +50,24 @@ def html2text(html):
         def get_data(self):
             return ''.join(self.fed)
 
+    def sanitize(text):
+        """ Sanitize test """
+        # delete tab and unicorde space.
+        text = text.replace('\t', ' ').replace('\xa0', ' ')
+        # eliminate concat error such as "foo</X><Y>bar -> foobar"
+        text = re.sub(r"><", "> <", text)
+        return text
+
     s = MLStripper()
-    s.feed(html)
-    return s.get_data()
+    s.feed(sanitize(html))
+    text = re.sub(r" +", " ", s.get_data())
+    # delete space and filter blank sentences.
+    text = '\n'.join(
+        filter(lambda x: x != '',
+            map(lambda s: s.strip(), text.split('\n'))
+        )
+    )
+    return text
 
 
 def main():
@@ -82,23 +77,22 @@ def main():
     parser.add_argument('input',
                         help="input file or url.")
 
-    parser.add_argument('-b', '--not-body-extract',
+    parser.add_argument('-b', '--body-extract',
                         action='store_false',
-                        help="not extract main body text from html using buriy's readability")
+                        help="**not** extract main body text from html using buriy's readability")
 
     args = parser.parse_args()
 
     if args.input.startswith('http://') or args.input.startswith('https://'):
-        html = url2html(argsa)
+        html = url2html(args.input)
     else:
         html = sys.stdin
 
     if args.body_extract:
         html  = html2body(html)
 
-    body = format_body(body)
-
-    args.destinaiton.write(title + '\n' + body)
+    text = html2text(html)
+    print(text)
 
 
 if __name__ == '__main__':
