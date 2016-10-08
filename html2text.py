@@ -12,6 +12,7 @@ from readability.readability import Document
 import sys
 import urllib.request
 
+
 def url2html(url):
     """get html from internet url"""
     headers = {
@@ -49,37 +50,44 @@ class Parser(HTMLParser):
         self.reset()
         self.convert_charrefs= True
         self.fed = []
-        self.current_tag = 'INIT_VALUE'
+        self.current_tag = None
+        # prev_state is a element of set('START_TAG', 'END_TAG',  'DATA')
+        self.prev_state = None
 
-    def handle_startendtag(self, tag, _):
+    def handle_starttag(self, tag, _):
         self.current_tag = tag.lower()
+        # to bypass extract from 'foo</X><Y>bar' to 'foobar'
+        # some cases such as 'foo</X><Y> bar' shouldn't append space.
+        # so, get_data's compress extra spaces.
+        if self.prev_state == 'END_TAG':
+            self.fed.append(' ')
+        self.prev_state = 'START_TAG'
 
     def handle_data(self, data):
+        self.prev_state = 'DATA'
         if self.current_tag in self.IGNORES: return
         self.fed.append(data)
 
     def handle_endtag(self, tag):
+        self.prev_state = 'END_TAG'
         # to bypass extract from '<p>foo</p>bar' to 'foobar'
-        # this case potentially failed to be tokenized
+        # TODO
+        # this process has bags if block tag altered inline in html or css.
         if tag in self.BLOCKS:
             self.fed.append('\n')
 
     def get_data(self):
         text = ''.join(self.fed)
-
         # normailze space letter
         text = text.replace('\t', ' ').replace('\xa0', ' ')
-
         # compress space letters
         text = re.sub(r' +', ' ', text)
-
         # delete space and filter blank sentences.
         text = '\n'.join(
             filter(lambda x: x != '',
                 map(lambda s: s.strip(), text.split('\n'))
             )
         )
-
         return text
 
 
