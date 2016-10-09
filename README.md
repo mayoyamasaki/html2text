@@ -32,8 +32,8 @@ Or you can use it with Python.
 $ python3
 >>> import html2text
 >>> html = html2text.url2html('https://example.com')
->>> bodyhtml = html2text.html2body()
->>> text = html2text.html2text()
+>>> bodyhtml = html2text.html2body(html)
+>>> text = html2text.html2text(bodyhtml)
 ```
 
 ## License
